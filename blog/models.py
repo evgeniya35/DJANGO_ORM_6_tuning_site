@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.urls import reverse
 from django.contrib.auth.models import User
 
@@ -18,15 +18,23 @@ class PostQuerySet(models.QuerySet):
     
     def popular(self):
         return self.annotate(likes_count=Count('likes')).order_by('-likes_count')
+    
+
+class TagQuerySet(models.QuerySet):
+
+    def popular(self):
+        return self.annotate(posts_count=Count('posts')) \
+            .order_by('-posts_count')
 
 
 class Post(models.Model):
-    objects = PostQuerySet.as_manager()
     title = models.CharField('Заголовок', max_length=200)
     text = models.TextField('Текст')
     slug = models.SlugField('Название в виде url', max_length=200)
     image = models.ImageField('Картинка')
     published_at = models.DateTimeField('Дата и время публикации')
+
+    objects = PostQuerySet.as_manager()
 
     author = models.ForeignKey(
         User,
@@ -55,16 +63,10 @@ class Post(models.Model):
         verbose_name_plural = 'посты'
 
 
-class TagQuerySet(models.QuerySet):
-
-    def popular(self):
-        return self.annotate(Count('posts')) \
-            .order_by('-posts__count')
-
-
 class Tag(models.Model):
-    objects = TagQuerySet().as_manager()
     title = models.CharField('Тег', max_length=20, unique=True)
+    
+    objects = TagQuerySet.as_manager()
 
     def __str__(self):
         return self.title
