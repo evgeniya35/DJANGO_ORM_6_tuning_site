@@ -1,5 +1,8 @@
+from curses.ascii import HT
 from django.shortcuts import render
 from django.db.models import Count, Prefetch
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import Http404
 from blog.models import Comment, Post, Tag
 
 
@@ -51,7 +54,11 @@ def index(request):
 
 
 def post_detail(request, slug):
-    post = Post.objects.select_related('author').get(slug=slug)
+    try:
+        post = Post.objects.select_related('author').get(slug=slug)
+    except ObjectDoesNotExist:
+        raise Http404(f'Post "{slug}" not exist')
+
     comments = Comment.objects.prefetch_related('author').filter(post=post)
     serialized_comments = []
     for comment in comments:
@@ -97,7 +104,11 @@ def post_detail(request, slug):
 
 
 def tag_filter(request, tag_title):
-    tag = Tag.objects.get(title=tag_title)
+    try:
+        tag = Tag.objects.get(title=tag_title)
+    except ObjectDoesNotExist:
+        raise Http404(f'Tag "{tag_title}" not exist')
+    
     prefetch = Prefetch(
         'tags',
         queryset=Tag.objects.annotate(posts_count=Count('posts'))
